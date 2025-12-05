@@ -1,32 +1,61 @@
 package dao;
 
+import java.math.BigDecimal;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 import models.Product;
+import models.ProductPriceHistory;
 import util.DBConnection;
 
 public class ProductDAOImpl implements ProductDAO {
     
+    private ProductPriceHistoryDAO priceHistoryDAO = new ProductPriceHistoryDAO();
+    
     @Override
     public List<Product> findAll() {
+        return findWithPagination(0, Integer.MAX_VALUE, null, null);
+    }
+    
+    public List<Product> findWithPagination(int page, int pageSize, BigDecimal minPrice, BigDecimal maxPrice) {
         List<Product> products = new ArrayList<>();
-        String sql = "SELECT p.id, p.name, p.slug, p.description, p.price, p.availability, " +
-                     "p.status_id, p.category_id, p.brand_id, p.created_at, p.updated_at, " +
-                     "c.name AS category_name, b.name AS brand_name, s.label AS status_label " +
-                     "FROM products p " +
-                     "LEFT JOIN categories c ON p.category_id = c.id " +
-                     "LEFT JOIN brands b ON p.brand_id = b.id " +
-                     "LEFT JOIN product_status s ON p.status_id = s.id " +
-                     "ORDER BY p.id DESC";
+        StringBuilder sql = new StringBuilder();
+        sql.append("SELECT p.id, p.name, p.slug, p.description, p.price, p.availability, ");
+        sql.append("p.status_id, p.category_id, p.brand_id, p.created_at, p.updated_at, ");
+        sql.append("c.name AS category_name, b.name AS brand_name, s.label AS status_label ");
+        sql.append("FROM products p ");
+        sql.append("LEFT JOIN categories c ON p.category_id = c.id ");
+        sql.append("LEFT JOIN brands b ON p.brand_id = b.id ");
+        sql.append("LEFT JOIN product_status s ON p.status_id = s.id ");
+        sql.append("WHERE 1=1 ");
         
-        Connection conn = null;
+        if (minPrice != null) {
+            sql.append("AND p.price >= ? ");
+        }
+        if (maxPrice != null) {
+            sql.append("AND p.price <= ? ");
+        }
+        
+        sql.append("ORDER BY p.id DESC ");
+        sql.append("LIMIT ? OFFSET ?");
+        
+        Connection conn = DBConnection.getConnection();
         PreparedStatement pstmt = null;
         ResultSet rs = null;
         
         try {
-            conn = DBConnection.getConnection();
-            pstmt = conn.prepareStatement(sql);
+            pstmt = conn.prepareStatement(sql.toString());
+            
+            int paramIndex = 1;
+            if (minPrice != null) {
+                pstmt.setBigDecimal(paramIndex++, minPrice);
+            }
+            if (maxPrice != null) {
+                pstmt.setBigDecimal(paramIndex++, maxPrice);
+            }
+            pstmt.setInt(paramIndex++, pageSize);
+            pstmt.setInt(paramIndex, page * pageSize);
+            
             rs = pstmt.executeQuery();
             
             while (rs.next()) {
@@ -35,18 +64,66 @@ public class ProductDAOImpl implements ProductDAO {
             }
             
         } catch (SQLException e) {
-            System.err.println("Lay danh sach san pham khong thanh cong");
-            e.printStackTrace();
+            System.err.println("Loi khi lay danh sach san pham: " + e.getMessage());
         } finally {
-            closeResources(conn, pstmt, rs);
+            try {
+                if (rs != null) rs.close();
+                if (pstmt != null) pstmt.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
         }
         
         return products;
     }
     
+    public int countProducts(BigDecimal minPrice, BigDecimal maxPrice) {
+        StringBuilder sql = new StringBuilder();
+        sql.append("SELECT COUNT(*) FROM products p WHERE 1=1 ");
+        
+        if (minPrice != null) {
+            sql.append("AND p.price >= ? ");
+        }
+        if (maxPrice != null) {
+            sql.append("AND p.price <= ? ");
+        }
+        
+        Connection conn = DBConnection.getConnection();
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+        
+        try {
+            pstmt = conn.prepareStatement(sql.toString());
+            
+            int paramIndex = 1;
+            if (minPrice != null) {
+                pstmt.setBigDecimal(paramIndex++, minPrice);
+            }
+            if (maxPrice != null) {
+                pstmt.setBigDecimal(paramIndex, maxPrice);
+            }
+            
+            rs = pstmt.executeQuery();
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("Loi khi dem san pham: " + e.getMessage());
+        } finally {
+            try {
+                if (rs != null) rs.close();
+                if (pstmt != null) pstmt.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+        
+        return 0;
+    }
+    
     @Override
     public Product findById(long id) {
-        Product product = null;
         String sql = "SELECT p.id, p.name, p.slug, p.description, p.price, p.availability, " +
                      "p.status_id, p.category_id, p.brand_id, p.created_at, p.updated_at, " +
                      "c.name AS category_name, b.name AS brand_name, s.label AS status_label " +
@@ -56,28 +133,31 @@ public class ProductDAOImpl implements ProductDAO {
                      "LEFT JOIN product_status s ON p.status_id = s.id " +
                      "WHERE p.id = ?";
         
-        Connection conn = null;
+        Connection conn = DBConnection.getConnection();
         PreparedStatement pstmt = null;
         ResultSet rs = null;
         
         try {
-            conn = DBConnection.getConnection();
             pstmt = conn.prepareStatement(sql);
             pstmt.setLong(1, id);
             rs = pstmt.executeQuery();
             
             if (rs.next()) {
-                product = extractProductFromResultSet(rs);
+                return extractProductFromResultSet(rs);
             }
             
         } catch (SQLException e) {
-            System.err.println("Tim san pham theo ID khong thanh cong");
-            e.printStackTrace();
+            System.err.println("Loi khi tim san pham theo ID: " + e.getMessage());
         } finally {
-            closeResources(conn, pstmt, rs);
+            try {
+                if (rs != null) rs.close();
+                if (pstmt != null) pstmt.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
         }
         
-        return product;
+        return null;
     }
 
     @Override
@@ -93,12 +173,11 @@ public class ProductDAOImpl implements ProductDAO {
                      "WHERE LOWER(p.name) LIKE LOWER(?) " +
                      "ORDER BY p.id DESC";
         
-        Connection conn = null;
+        Connection conn = DBConnection.getConnection();
         PreparedStatement pstmt = null;
         ResultSet rs = null;
         
         try {
-            conn = DBConnection.getConnection();
             pstmt = conn.prepareStatement(sql);
             pstmt.setString(1, "%" + keyword + "%");
             rs = pstmt.executeQuery();
@@ -109,10 +188,14 @@ public class ProductDAOImpl implements ProductDAO {
             }
             
         } catch (SQLException e) {
-            System.err.println("Tim kiem san pham khong thanh cong");
-            e.printStackTrace();
+            System.err.println("Loi khi tim kiem san pham: " + e.getMessage());
         } finally {
-            closeResources(conn, pstmt, rs);
+            try {
+                if (rs != null) rs.close();
+                if (pstmt != null) pstmt.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
         }
         
         return products;
@@ -124,11 +207,10 @@ public class ProductDAOImpl implements ProductDAO {
                      "status_id, category_id, brand_id) " +
                      "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         
-        Connection conn = null;
+        Connection conn = DBConnection.getConnection();
         PreparedStatement pstmt = null;
         
         try {
-            conn = DBConnection.getConnection();
             pstmt = conn.prepareStatement(sql);
             
             pstmt.setString(1, product.getName());
@@ -150,18 +232,21 @@ public class ProductDAOImpl implements ProductDAO {
                 pstmt.setNull(8, Types.BIGINT);
             }
             
-            int rowsAffected = pstmt.executeUpdate();
+            int result = pstmt.executeUpdate();
             
-            if (rowsAffected > 0) {
-                System.out.println("Them san pham thanh cong");
+            if (result > 0) {
+                System.out.println("Them san pham thanh cong!");
                 return true;
             }
             
         } catch (SQLException e) {
-            System.err.println("Loi khi them san pham");
-            e.printStackTrace();
+            System.err.println("Loi khi them san pham: " + e.getMessage());
         } finally {
-            closeResources(conn, pstmt, null);
+            try {
+                if (pstmt != null) pstmt.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
         }
         
         return false;
@@ -169,16 +254,26 @@ public class ProductDAOImpl implements ProductDAO {
     
     @Override
     public boolean update(Product product) {
+        Product oldProduct = findById(product.getId());
+        
+        if (oldProduct != null && !oldProduct.getPrice().equals(product.getPrice())) {
+            ProductPriceHistory history = new ProductPriceHistory();
+            history.setProductId(product.getId());
+            history.setOldPrice(oldProduct.getPrice());
+            history.setNewPrice(product.getPrice());
+            priceHistoryDAO.insert(history);
+            System.out.println("Da luu lich su thay doi gia");
+        }
+        
         String sql = "UPDATE products SET name = ?, slug = ?, description = ?, price = ?, " +
                      "availability = ?, status_id = ?, category_id = ?, brand_id = ?, " +
                      "updated_at = NOW() " +
                      "WHERE id = ?";
         
-        Connection conn = null;
+        Connection conn = DBConnection.getConnection();
         PreparedStatement pstmt = null;
         
         try {
-            conn = DBConnection.getConnection();
             pstmt = conn.prepareStatement(sql);
             
             pstmt.setString(1, product.getName());
@@ -202,54 +297,56 @@ public class ProductDAOImpl implements ProductDAO {
             
             pstmt.setLong(9, product.getId());
             
-            int rowsAffected = pstmt.executeUpdate();
+            int result = pstmt.executeUpdate();
             
-            if (rowsAffected > 0) {
-                System.out.println("Cap nhat san pham thanh cong");
+            if (result > 0) {
+                System.out.println("Cap nhat san pham thanh cong!");
                 return true;
             }
             
         } catch (SQLException e) {
-            System.err.println("Loi khi cap nhat san pham");
-            e.printStackTrace();
+            System.err.println("Loi khi cap nhat san pham: " + e.getMessage());
         } finally {
-            closeResources(conn, pstmt, null);
+            try {
+                if (pstmt != null) pstmt.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
         }
         
         return false;
     }
     
-
     @Override
     public boolean delete(long id) {
         String sql = "DELETE FROM products WHERE id = ?";
         
-        Connection conn = null;
+        Connection conn = DBConnection.getConnection();
         PreparedStatement pstmt = null;
         
         try {
-            conn = DBConnection.getConnection();
             pstmt = conn.prepareStatement(sql);
             pstmt.setLong(1, id);
+            int result = pstmt.executeUpdate();
             
-            int rowsAffected = pstmt.executeUpdate();
-            
-            if (rowsAffected > 0) {
-                System.out.println("Xoa san pham thanh cong");
+            if (result > 0) {
+                System.out.println("Xoa san pham thanh cong!");
                 return true;
             }
             
         } catch (SQLException e) {
-            System.err.println("Loi khi xoa san pham");
-            e.printStackTrace();
+            System.err.println("Loi khi xoa san pham: " + e.getMessage());
         } finally {
-            closeResources(conn, pstmt, null);
+            try {
+                if (pstmt != null) pstmt.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
         }
         
         return false;
     }
     
-
     private Product extractProductFromResultSet(ResultSet rs) throws SQLException {
         Product product = new Product();
         
@@ -261,13 +358,11 @@ public class ProductDAOImpl implements ProductDAO {
         product.setAvailability(rs.getInt("availability"));
         product.setStatusId(rs.getLong("status_id"));
         
-        // Xử lý category_id có thể null
         long categoryId = rs.getLong("category_id");
         if (!rs.wasNull()) {
             product.setCategoryId(categoryId);
         }
         
-        // Xử lý brand_id có thể null
         long brandId = rs.getLong("brand_id");
         if (!rs.wasNull()) {
             product.setBrandId(brandId);
@@ -276,23 +371,10 @@ public class ProductDAOImpl implements ProductDAO {
         product.setCreatedAt(rs.getTimestamp("created_at"));
         product.setUpdatedAt(rs.getTimestamp("updated_at"));
         
-        // Thông tin bổ sung
         product.setCategoryName(rs.getString("category_name"));
         product.setBrandName(rs.getString("brand_name"));
         product.setStatusLabel(rs.getString("status_label"));
         
         return product;
-    }
-    
-
-    private void closeResources(Connection conn, PreparedStatement pstmt, ResultSet rs) {
-        try {
-            if (rs != null) rs.close();
-            if (pstmt != null) pstmt.close();
-            if (conn != null) conn.close();
-        } catch (SQLException e) {
-            System.err.println("Loi khi đong ket noi");
-            e.printStackTrace();
-        }
     }
 }

@@ -34,19 +34,14 @@ public class ProductStatusDAO {
             System.err.println("Lay danh sach trang thai san pham khong thanh cong");
             e.printStackTrace();
         } finally {
-            closeResources(conn, pstmt, rs);
+            try {
+                if (rs != null) rs.close();
+                if (pstmt != null) pstmt.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
         }
         
         return statusList;
-    }
-    
-    private void closeResources(Connection conn, PreparedStatement pstmt, ResultSet rs) {
-        try {
-            if (rs != null) rs.close();
-            if (pstmt != null) pstmt.close();
-            if (conn != null) conn.close();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
     }
 }

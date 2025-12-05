@@ -6,6 +6,7 @@ import java.sql.Timestamp;
 public class ProductPriceHistory {
     private Long id;
     private Long productId;
+    private String productName;
     private BigDecimal oldPrice;
     private BigDecimal newPrice;
     private Timestamp changedAt;
@@ -44,6 +45,15 @@ public class ProductPriceHistory {
         this.productId = productId;
     }
     
+    public String getProductName() {
+        
+        return productName;
+    }
+    
+    public void setProductName(String productName) {
+        this.productName = productName;
+    }
+    
     public BigDecimal getOldPrice() {
         return oldPrice;
     }
@@ -70,12 +80,6 @@ public class ProductPriceHistory {
     
     @Override
     public String toString() {
-        return "ProductPriceHistory{" +
-                "id=" + id +
-                ", productId=" + productId +
-                ", oldPrice=" + oldPrice +
-                ", newPrice=" + newPrice +
-                ", changedAt=" + changedAt +
-                '}';
+        return "Gia cu: " + oldPrice + " -> Gia moi: " + newPrice;
     }
 }

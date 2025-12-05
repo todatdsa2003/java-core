@@ -1,29 +1,42 @@
 package models;
 
+/**
+ * Model ProductStatus - Đại diện cho bảng product_status
+ */
 public class ProductStatus {
     private Long id;
     private String code;
     private String label;
     private String description;
+    private Boolean isActive;
+    private Integer displayOrder;
     
+
     public ProductStatus() {
     }
     
-    public ProductStatus(Long id, String code, String label, String description
-                       ) {
+    // Constructor đầy đủ
+    public ProductStatus(Long id, String code, String label, String description, 
+                        Boolean isActive, Integer displayOrder) {
         this.id = id;
         this.code = code;
         this.label = label;
         this.description = description;
-
+        this.isActive = isActive;
+        this.displayOrder = displayOrder;
     }
     
-    public ProductStatus(String code, String label, String description) {
+    // Constructor không có id (để insert)
+    public ProductStatus(String code, String label, String description, 
+                        Boolean isActive, Integer displayOrder) {
         this.code = code;
         this.label = label;
         this.description = description;
+        this.isActive = isActive;
+        this.displayOrder = displayOrder;
     }
     
+    // Getters và Setters
     public Long getId() {
         return id;
     }
@@ -56,9 +69,24 @@ public class ProductStatus {
         this.description = description;
     }
     
+    public Boolean getIsActive() {
+        return isActive;
+    }
+    
+    public void setIsActive(Boolean isActive) {
+        this.isActive = isActive;
+    }
+    
+    public Integer getDisplayOrder() {
+        return displayOrder;
+    }
+    
+    public void setDisplayOrder(Integer displayOrder) {
+        this.displayOrder = displayOrder;
+    }
     
     @Override
     public String toString() {
-        return label; 
+        return label; // Hiển thị label trong ComboBox
     }
 }

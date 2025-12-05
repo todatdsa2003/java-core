@@ -8,16 +8,18 @@ public class Category {
     private String slug;
     private Long parentId;
     private Timestamp createdAt;
+    private Timestamp updatedAt;
     
     public Category() {
     }
     
-    public Category(Long id, String name, String slug, Long parentId, Timestamp createdAt) {
+    public Category(Long id, String name, String slug, Long parentId, Timestamp createdAt, Timestamp updatedAt) {
         this.id = id;
         this.name = name;
         this.slug = slug;
         this.parentId = parentId;
         this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
     }
     
     public Category(String name, String slug, Long parentId) {
@@ -50,6 +52,7 @@ public class Category {
         this.slug = slug;
     }
     
+    
     public Long getParentId() {
         return parentId;
     }
@@ -64,6 +67,14 @@ public class Category {
     
     public void setCreatedAt(Timestamp createdAt) {
         this.createdAt = createdAt;
+    }
+    
+    public Timestamp getUpdatedAt() {
+        return updatedAt;
+    }
+    
+    public void setUpdatedAt(Timestamp updatedAt) {
+        this.updatedAt = updatedAt;
     }
     
     @Override
