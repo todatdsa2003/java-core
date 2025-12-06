@@ -13,7 +13,7 @@ public class ProductAttributeDAO {
         String sql = "SELECT pa.*, p.name AS product_name " +
                      "FROM product_attributes pa " +
                      "LEFT JOIN products p ON pa.product_id = p.id " +
-                     "ORDER BY pa.id DESC";
+                     "ORDER BY p.name";
         
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql);
@@ -33,7 +33,10 @@ public class ProductAttributeDAO {
     
     public List<ProductAttribute> findByProductId(long productId) {
         List<ProductAttribute> attributes = new ArrayList<>();
-        String sql = "SELECT * FROM product_attributes WHERE product_id = ? ORDER BY id";
+        String sql = " SELECT pa.*, p.name AS product_name " +
+                     "FROM product_attributes pa " +
+                     "LEFT JOIN products p ON pa.product_id = p.id " +
+                     "WHERE product_id = ?";
         
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -142,10 +145,10 @@ public class ProductAttributeDAO {
         // attr.setCreatedAt(rs.getTimestamp("created_at"));
         // attr.setUpdatedAt(rs.getTimestamp("updated_at"));
         
-        // try {
-        //     attr.setProductName(rs.getString("product_name"));
-        // } catch (SQLException e) {
-        // }
+        try {
+            attr.setProductName(rs.getString("product_name"));
+        } catch (SQLException e) {
+        }
         
         return attr;
     }

@@ -2,12 +2,12 @@ package ui;
 
 import dao.ProductAttributeDAO;
 import dao.ProductDAOImpl;
-import models.ProductAttribute;
-import models.Product;
-import javax.swing.*;
-import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.util.List;
+import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
+import models.Product;
+import models.ProductAttribute;
 
 public class ProductAttributeFrame extends JFrame {
     
